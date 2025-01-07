@@ -17,6 +17,26 @@ version_gt() {
     [ "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1" ]
 }
 
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -e|--edition)
+            if [[ "$2" =~ ^(oss|cloud|enterprise)$ ]]; then
+                EDITION="$2"
+                shift # Shift past argument value
+            else
+                echo "Invalid edition specified. Allowed values are: oss, cloud, enterprise."
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+    shift # Shift past argument
+done
+
 # Get all versions from Github release page
 versions=$(curl -s "$RELEASE_PAGE" \
     | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' \
