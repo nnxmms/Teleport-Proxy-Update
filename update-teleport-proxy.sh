@@ -4,13 +4,21 @@
 # Author: Philipp Zimmermann
 # Date: 07.01.2024
 
+#!/bin/bash
+
 # VARS
 RELEASE_PAGE="https://github.com/gravitational/teleport/releases"
 EDITION="oss"
 UPDATE_COMMAND="curl https://cdn.teleport.dev/install-__VERSION__.sh | bash -s __VERSION_WITHOUT_V__ __EDITION__"
 
-# Get all version from Github release page
-versions=$(curl -s $RELEASE_PAGE \
+# Function to compare versions
+version_gt() {
+    # Returns true if $1 is greater than $2
+    [ "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1" ]
+}
+
+# Get all versions from Github release page
+versions=$(curl -s "$RELEASE_PAGE" \
     | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' \
     | grep -w 'v[0-9]\+\.[0-9]\+\.[0-9]\+' \
     | sort -u)
@@ -24,13 +32,25 @@ version_no_v=${latest_release#v}
 # Print the latest release to verify
 echo "Found Latest Release: $latest_release"
 
-# Replace placeholders in the update command
-update_command_with_values=${UPDATE_COMMAND/__VERSION__/$latest_release}
-update_command_with_values=${update_command_with_values/__VERSION_WITHOUT_V__/$version_no_v}
-update_command_with_values=${update_command_with_values/__EDITION__/$EDITION}
+# Get the currently installed version
+current_version=$(teleport version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | sort -u)
+if [ -z "$current_version" ]; then
+    echo "Teleport is not installed or not in PATH. Proceeding with installation."
+    current_version="v0.0.0" # Treat as if no version is installed
+else
+    echo "Currently Installed Version: $current_version"
+fi
 
-# Print the final update command
-echo "Executing: $update_command_with_values"
+# Compare versions and update if needed
+if version_gt "$latest_release" "$current_version"; then
+    echo "A newer version is available: $latest_release (Installed: $current_version)"
+    update_command_with_values=${UPDATE_COMMAND/__VERSION__/$latest_release}
+    update_command_with_values=${update_command_with_values/__VERSION_WITHOUT_V__/$version_no_v}
+    update_command_with_values=${update_command_with_values/__EDITION__/$EDITION}
 
-# Execute the final update command
-eval "$update_command_with_values"
+    # Print the final update command
+    echo "Executing: $update_command_with_values"
+    eval "$update_command_with_values"
+else
+    echo "Teleport is already up-to-date (Installed: $current_version, Latest: $latest_release)"
+fi
