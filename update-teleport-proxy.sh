@@ -4,8 +4,6 @@
 # Author: Philipp Zimmermann
 # Date: 07.01.2024
 
-#!/bin/bash
-
 # VARS
 RELEASE_PAGE="https://github.com/gravitational/teleport/releases"
 EDITION="oss"
